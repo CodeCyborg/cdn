@@ -1,0 +1,187 @@
+<html>
+  <head>
+    <script src="./filemapper.umd.js"></script>
+    <style>
+        .fileMapperContainer{
+            width: 100%;
+            height: 600px;
+            overflow: auto;
+        }
+        .demoContainer{
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+        }
+        #demoTocContainer {
+            width: 20%;
+            padding: 5px;
+        }
+        #fileMapperContainer {
+            flex: 1;
+        }
+        #demoToc .group {
+            margin-left: 20px;
+        }
+        #demoToc .question {
+            margin-left: 40px;
+        }
+        #demoToc .toggle {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        #demoToc .group.collapsed.level-0 .questions,
+        #demoToc .group.collapsed.level-0 .level-1,
+        #demoToc .group.collapsed.level-1 .questions,
+        #demoToc .group.collapsed.level-1 .level-2,
+        #demoToc .group.collapsed.level-2 .questions{
+            display: none;
+        }
+        #demoToc .indicator {
+            margin-right: 5px;
+        }
+    </style>
+  </head>
+  <body>
+
+    <form id="excelForm">
+        <input type="file" id="fileInput" accept=".xlsx, .xls, .doc, .docx">
+        <button type="submit">Convert</button>
+    </form>
+        <span>OR</span>
+        <button onclick="loadDemoFile()" >Load Demo File</button>
+        <a href="https://xfileshare.000webhostapp.com/Sample_Dev_Grid_V4.0.xlsx" target="_blank">Download Excel Demo File</a>
+    <div class="demoContainer">
+        <div id="demoTocContainer">
+            <p>Table of Contents</p>
+            <div id="demoToc">
+            </div>
+        </div>
+        <div class="fileMapperContainer" id="fileMapperContainer"></div>
+    </div>
+    <script>
+
+        //#####################################
+        //## FUNCTION filemapper USAGE START ##
+        // cette function de mapping (filemapper.map() ) est appelé depuis l'evenement de conversion ( filemapper.convert() ) pour mapper les données du fichier excel, word ou pdf en html
+        // il faut l'utiliser dans l'implémentation dans la bibliothèque de dév de l'application ( VU.js, React, Angular, etc... )
+        demoMap = (data) =>{
+            window.filemapper.map(data,null, null );
+            console.log( data );
+        }
+
+        //ce code est une fonction ( filemapper.convert() ) possible de l'appeler pour convertire un fcichier excel, word ou pdf en html,
+        // il est possible d'indiquer une fonction de callback pour déclencher autre functons , dans cet eccemple , j'ai déclencher la fonction de mapping 
+        // il faut l'utiliser dans l'implémentation dans la bibliothèque de dév de l'application ( VU.js, React, Angular, etc... )
+        DemoConvert = (demoFile) =>{
+                const fileInput = document.getElementById('fileInput');
+                const file = fileInput.files[0];
+                const sheets = window.filemapper.convert(
+                    file,
+                    demoMap
+                );
+        }
+        // Ce code un evenement qui se déclenche depuis Filemapper des la sélecetion de nous élements comme ( groupe, question, etc...)
+        // il permet de déclencher la mise à jour du toc ( Table of Content ) à gauche de la page
+        // il faut utiliser cette évenement dans l'implémentation dans la bibliothèque de dév de l'application ( VU.js, React, Angular, etc... )
+        filemapper.tocEvent(function(data) {
+            console.log(data);
+            renderdemoToc(data);
+        });
+        //## FUNCTION filemapper USAGE END ##
+        //#####################################
+        
+
+
+
+
+
+
+
+
+        // Attention, le code suivant est la pour initier la demo, ps forcément utile pour l'implémentation dans la bibliothèque de dév de l'application ( VU.js, React, Angular, etc... )
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById('excelForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                DemoConvert();
+            });
+        });
+        function loadDemoFile(){
+            const fileUrl = 'https://xfileshare.000webhostapp.com/Sample_Dev_Grid_V4.0.xlsx';
+            fetch(fileUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const file = new File([blob], 'Sample_Dev_Grid_V4.0.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    const fileMap = filemapper.getFileMap();
+                    const htmlFile = filemapper.convert(file);
+                    filemapper.convert(file, (htmlFile) => {
+                        // Handle the exported data
+                        filemapper.map(htmlFile, fileMap );
+                    });
+                })
+                .catch(error => {
+                console.error('Error:', error);
+    });
+        }
+    
+        // ce code est purement pour la démo, donc pas forcément obigatoire il faut le remplacer par la bibliothèque de dév de l'application ( VU.js, React, Angular, etc... )
+        // ce code prmet de créer un TOC ( Table of Content ) pour la démo à guauche de la page
+        function renderdemoToc(data) {
+            const demoToc = document.getElementById('demoToc');
+            demoToc.innerHTML = '';
+            renderGroups(demoToc, data.data);
+        }
+        function renderGroups(demoTocDOM, groups) {
+            groups.forEach(group => {
+                let level = parseInt(group.level)
+                if (!level){
+                    renderGroup(demoTocDOM, group, true); // Pass true to indicate initial collapsed state
+                }else{
+                    let parentDiv = demoTocDOM.querySelector(`.level-${level-1}:last-child`);
+                    renderGroup(parentDiv, group, true);
+                }
+            });
+        }
+        function renderGroup(parentElement, group, isCollapsed) {
+            const groupDiv = document.createElement('div');
+            groupDiv.classList.add('group', `level-${group.level}`, isCollapsed ? 'collapsed' : '');
+
+            const toggleDiv = document.createElement('div');
+            toggleDiv.classList.add('toggle');
+            toggleDiv.addEventListener('click', () => {
+                groupDiv.classList.toggle('collapsed');
+                // Update the indicator dynamically
+                indicatorSpan.textContent = groupDiv.classList.contains('collapsed') ? '▶' : '▼';
+            });
+
+            const indicatorSpan = document.createElement('span');
+            indicatorSpan.classList.add('indicator');
+            indicatorSpan.textContent = '▶'; // Set default indicator to collapsed state
+            toggleDiv.appendChild(indicatorSpan);
+
+            const displayNameSpan = document.createElement('span');
+            displayNameSpan.textContent = group.displayName;
+            toggleDiv.appendChild(displayNameSpan);
+
+            groupDiv.appendChild(toggleDiv);
+
+            if (group.questions && Array.isArray(group.questions)) {
+                const questionsDiv = document.createElement('div');
+                questionsDiv.classList.add('questions');
+
+                group.questions.forEach(question => {
+                    if (question.contentType === "DESCRIPTION") return;
+                    const questionDiv = document.createElement('div');
+                    questionDiv.classList.add('question');
+                    questionDiv.textContent = '● '+question.question;
+                    questionsDiv.appendChild(questionDiv);
+                });
+
+                groupDiv.appendChild(questionsDiv);
+            }
+
+            parentElement.appendChild(groupDiv);
+        }
+    </script>
+  </body>
+</html>
